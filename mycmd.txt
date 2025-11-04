@@ -1,20 +1,3 @@
-Got it! 😎 I’ll convert everything to English, keep the animator, boot manager, painter, delete file, web open, restart commands, and also add simple games you can run from your terminal.
-
-Here’s the all-in-one block you can paste on Kali Linux:
-	•	Commands in meincmd & myshell:
-	•	animator / anim / animbg → terminal animation
-	•	bootmgr → boot manager / firmware options
-	•	painter → opens image editor (Pinta/GIMP/Krita)
-	•	delfile <path> → safely delete file/folder
-	•	webopen <url> → open URL in default browser
-	•	restart → restart system
-	•	games → choose from a few simple terminal games
-	•	Games included:
-	•	Guess the number (interactive Python game)
-	•	Tic Tac Toe (Python, 2-player in terminal)
-
-Here’s the full English block:
-
 #!/bin/bash
 # --- Block: meincmd in English with animator, bootmgr, painter, delfile, webopen, restart, games ---
 set -e
