@@ -1,0 +1,264 @@
+Got it! 😎 I’ll convert everything to English, keep the animator, boot manager, painter, delete file, web open, restart commands, and also add simple games you can run from your terminal.
+
+Here’s the all-in-one block you can paste on Kali Linux:
+	•	Commands in meincmd & myshell:
+	•	animator / anim / animbg → terminal animation
+	•	bootmgr → boot manager / firmware options
+	•	painter → opens image editor (Pinta/GIMP/Krita)
+	•	delfile <path> → safely delete file/folder
+	•	webopen <url> → open URL in default browser
+	•	restart → restart system
+	•	games → choose from a few simple terminal games
+	•	Games included:
+	•	Guess the number (interactive Python game)
+	•	Tic Tac Toe (Python, 2-player in terminal)
+
+Here’s the full English block:
+
+#!/bin/bash
+# --- Block: meincmd in English with animator, bootmgr, painter, delfile, webopen, restart, games ---
+set -e
+
+# Ensure ~/bin exists and PATH
+mkdir -p "$HOME/bin"
+if ! grep -q 'export PATH="$HOME/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null; then
+  echo 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.bashrc"
+fi
+
+# 1) meincmd main script
+cat > "$HOME/bin/meincmd" <<'BASHMEIN'
+#!/bin/bash
+# meincmd - English version with games, animator, bootmgr, painter, delfile, webopen, restart
+
+usage() {
+  echo "Usage: meincmd {hello|date|ip|anim|animator|animbg|painter|bootmgr|delfile <path>|webopen <url>|restart|games}"
+  exit 1
+}
+
+case "$1" in
+  hello)
+    echo "Hello! This is meincmd!"
+    ;;
+  date)
+    date
+    ;;
+  ip)
+    hostname -I 2>/dev/null || ip a
+    ;;
+  anim|animator)
+    if command -v animator >/dev/null 2>&1; then
+      animator
+    else
+      echo "animator not found."
+      exit 1
+    fi
+    ;;
+  animbg)
+    if command -v animator >/dev/null 2>&1; then
+      nohup animator >/tmp/animator.log 2>&1 & disown
+      echo "Animator started in background (log: /tmp/animator.log)"
+    else
+      echo "animator not found."
+    fi
+    ;;
+  painter)
+    if command -v pinta >/dev/null 2>&1; then
+      pinta "$2" &
+    elif command -v gimp >/dev/null 2>&1; then
+      gimp "$2" &
+    elif command -v krita >/dev/null 2>&1; then
+      krita "$2" &
+    else
+      TMPIMG="$(mktemp --suffix=.png)"
+      convert -size 800x600 xc:white "$TMPIMG" >/dev/null 2>&1 || :
+      if command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "${2:-$TMPIMG}" &
+      else
+        echo "No known painter installed. Install pinta, gimp, or krita."
+        exit 1
+      fi
+    fi
+    ;;
+  bootmgr)
+    echo "Boot Manager options:"
+    echo "  1) Normal reboot"
+    echo "  2) Firmware/UEFI reboot"
+    echo "  3) GRUB next boot entry (if GRUB installed)"
+    read -rp "Choose 1/2/3: " CH
+    case "$CH" in
+      1) echo "Normal reboot..."; sudo shutdown -r now;;
+      2) echo "Firmware/UEFI reboot..."; sudo systemctl reboot --firmware-setup;;
+      3)
+        if command -v grub-reboot >/dev/null 2>&1; then
+          echo "GRUB menu entries:"
+          sudo awk -F"'" '/menuentry /{print NR":"$0}' /boot/grub/grub.cfg 2>/dev/null | sed -n '1,20p'
+          read -rp "Enter GRUB entry index or name: " GRE
+          sudo grub-reboot "$GRE"
+          read -rp "Reboot now? (yes/no): " R
+          if [ "$R" = "yes" ] || [ "$R" = "y" ]; then sudo shutdown -r now; else echo "Cancelled."; fi
+        else
+          echo "grub-reboot not found."
+        fi
+        ;;
+      *) echo "Cancelled.";;
+    esac
+    ;;
+  delfile)
+    TARGET="$2"
+    if [ -z "$TARGET" ]; then
+      echo "Usage: meincmd delfile <path>"
+      exit 1
+    fi
+    TARGET_ABS="$(readlink -f "$TARGET" 2>/dev/null || printf "%s\n" "$TARGET")"
+    HOME_ABS="$(readlink -f "$HOME")"
+    echo "Target: $TARGET_ABS"
+    case "$TARGET_ABS" in
+      /|/boot|/bin|/sbin|/usr|/etc|/dev|/proc|/sys)
+        echo "Deleting this path is dangerous. Aborting."; exit 1;;
+    esac
+    if [[ "$TARGET_ABS" == "$HOME_ABS"* ]]; then
+      read -rp "Confirm delete '$TARGET_ABS' (yes to confirm): " CONF
+      if [ "$CONF" = "yes" ] || [ "$CONF" = "y" ]; then
+        rm -rv -- "$TARGET_ABS"
+      else
+        echo "Cancelled."
+      fi
+    else
+      echo "Target outside Home directory. Type full path to confirm:"
+      read -rp "Confirm path: " CONF2
+      if [ "$CONF2" = "$TARGET_ABS" ]; then
+        sudo rm -rv -- "$TARGET_ABS"
+      else
+        echo "Confirmation mismatch. Cancelled."
+      fi
+    fi
+    ;;
+  webopen)
+    URL="$2"
+    if [ -z "$URL" ]; then
+      echo "Usage: meincmd webopen <url>"
+      exit 1
+    fi
+    if command -v xdg-open >/dev/null 2>&1; then
+      xdg-open "$URL" >/dev/null 2>&1 &
+    else
+      echo "xdg-open not found."
+    fi
+    ;;
+  restart)
+    read -rp "System will restart. Continue? (yes/no): " ANTW
+    if [ "$ANTW" = "yes" ] || [ "$ANTW" = "y" ]; then
+      sudo shutdown -r now
+    else
+      echo "Cancelled."
+    fi
+    ;;
+  games)
+    echo "Choose a game:"
+    echo "1) Guess the number"
+    echo "2) Tic Tac Toe (2 players)"
+    read -rp "Select 1/2: " G
+    case "$G" in
+      1) python3 - <<'PYGUESS'
+import random
+num = random.randint(1,100)
+tries = 0
+print("Guess the number between 1 and 100!")
+while True:
+    guess = input("Your guess: ")
+    if not guess.isdigit():
+        print("Enter a number.")
+        continue
+    guess = int(guess)
+    tries += 1
+    if guess < num:
+        print("Too low!")
+    elif guess > num:
+        print("Too high!")
+    else:
+        print(f"Correct! You guessed in {tries} tries.")
+        break
+PYGUESS
+      ;;
+      2) python3 - <<'PYTTT'
+def print_board(b):
+    for i in range(3):
+        print("|".join(b[i]))
+        if i<2: print("-"*5)
+board = [[" "]*3 for _ in range(3)]
+turn="X"
+for _ in range(9):
+    print_board(board)
+    move=input(f"Player {turn}, enter row,col (0-2): ")
+    try:
+        r,c=map(int,move.split(","))
+        if board[r][c]==" ":
+            board[r][c]=turn
+        else:
+            print("Spot taken!")
+            continue
+    except:
+        print("Invalid input")
+        continue
+    # check win
+    for line in board+[[board[i][j] for i in range(3)] for j in range(3)] + [[board[i][i] for i in range(3)],[board[i][2-i] for i in range(3)]]:
+        if line==["X"]*3:
+            print_board(board); print("X wins!"); exit(0)
+        if line==["O"]*3:
+            print_board(board); print("O wins!"); exit(0)
+    turn="O" if turn=="X" else "X"
+print_board(board); print("Draw!")
+PYTTT
+      ;;
+      *) echo "Cancelled";;
+    esac
+    ;;
+  *)
+    usage
+    ;;
+esac
+BASHMEIN
+chmod +x "$HOME/bin/meincmd"
+
+# 2) Animator
+cat > "$HOME/bin/animator" <<'PYANIM'
+#!/usr/bin/env python3
+import sys, time, shutil, signal
+def sigint_handler(signum, frame):
+    print("\nAborted.")
+    sys.exit(0)
+signal.signal(signal.SIGINT, sigint_handler)
+cols, _ = shutil.get_terminal_size((80,20))
+text = "<<< ANIMATOR >>>"
+pos = 0
+dir = 1
+spinner = ['-','\\','|','/']
+try:
+    for frame in range(1000):
+        cols, _ = shutil.get_terminal_size((80,20))
+        space = max(0, cols - len(text) -1)
+        x = pos % (space+1) if space>0 else 0
+        line = ' '*x + text
+        sp = spinner[frame % len(spinner)]
+        print("\r" + line + " " + sp, end="", flush=True)
+        pos += dir
+        if pos>=space or pos<=0: dir*=-1
+        time.sleep(0.05)
+except KeyboardInterrupt:
+    print("\nStopped.")
+PYANIM
+chmod +x "$HOME/bin/animator"
+
+# 3) myshell
+cat > "$HOME/bin/myshell" <<'PYMYSHELL'
+#!/usr/bin/env python3
+import shlex, subprocess, sys, os
+PROMPT="myshell> "
+def do_cmd(parts):
+    if not parts: return
+    cmd=parts[0]
+    if cmd in ("exit","quit"): sys.exit(0)
+    if cmd=="say": print(" ".join(parts[1:])); return
+    if cmd=="run":
+        try: subprocess.run(parts[1:], check=False)
+        except FileNotFound
